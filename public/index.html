@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090914">
+  <meta name="description" content="Saskeh Playground — kumpulan game web interaktif.">
+  <title>Saskeh Playground</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090914;--panel:#111225;--panel2:#171a31;--line:#292b49;--text:#f5f5ff;--muted:#a6a8c3;--purple:#9877ff;--pink:#e879c8}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 12% 0%,#29204d 0,transparent 42%),radial-gradient(ellipse at 95% 25%,#1b2548 0,transparent 38%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    a{color:inherit;text-decoration:none}.wrap{width:min(1050px,100%);margin:auto;padding:28px 20px 50px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{display:flex;align-items:center;gap:11px;font-weight:900;letter-spacing:1.5px}.logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#9c7bff,#ed79c9);box-shadow:0 8px 28px #9c7bff33;font-size:19px}.toplabel{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:8px 12px}
+    .hero{padding:62px 0 36px;max-width:720px}.eyebrow{color:#c4b2ff;font-size:11px;letter-spacing:3px;font-weight:800}.hero h1{font-size:clamp(36px,8vw,66px);line-height:1.02;letter-spacing:-2.5px;margin:13px 0 16px}.hero h1 span{background:linear-gradient(100deg,#b9a4ff,#f1a1d8);background-clip:text;color:transparent}.hero p{max-width:550px;line-height:1.75;color:var(--muted);font-size:15px;margin:0}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:25px}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:45px;padding:0 17px;border-radius:13px;font-weight:800;font-size:13px;border:1px solid var(--line);background:#ffffff08}.btn.primary{border:0;color:#100d21;background:linear-gradient(100deg,#b5a0ff,#efa0d5);box-shadow:0 9px 30px #9c7bff2b}
+    .sectionHead{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:22px 0 15px}.sectionHead h2{font-size:19px;margin:0}.sectionHead span{font-size:12px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.card{position:relative;overflow:hidden;min-height:164px;border:1px solid var(--line);border-radius:19px;background:linear-gradient(145deg,#17192fdd,#101222ee);padding:18px;transition:transform .18s ease,border-color .18s ease}.card:active{transform:scale(.985)}.card:hover{border-color:#7770bf}.ico{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:#a38aff18;font-size:21px;margin-bottom:18px}.card h3{font-size:15px;margin:0 0 6px}.card p{font-size:12px;line-height:1.55;color:var(--muted);margin:0;max-width:260px}.arrow{position:absolute;right:18px;top:20px;color:#b6a5ff;font-size:18px}.extra{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:13px}.extra .card{min-height:112px;display:flex;gap:14px;align-items:center}.extra .ico{flex:0 0 42px;margin:0}.foot{margin-top:28px;color:#777b9a;font-size:11px;line-height:1.7;text-align:center}
+    @media(max-width:700px){.wrap{padding:20px 15px 35px}.hero{padding:48px 0 24px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{padding:15px;min-height:160px}.extra{gap:10px}.toplabel{font-size:10px}}@media(max-width:380px){.grid{grid-template-columns:1fr}.card{min-height:125px}.ico{margin-bottom:12px}.extra{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){.card{transition:none}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top"><div class="brand"><div class="logo">忍</div><span>SASKEH</span></div><div class="toplabel">WEB PLAYGROUND</div></header>
+    <section class="hero">
+      <div class="eyebrow">SASKEH INTERACTIVE EXPERIENCE</div>
+      <h1>Play. Connect.<br><span>Have Fun.</span></h1>
+      <p>Kumpulan permainan web Saskeh. Masuk ke lobby untuk membuat room, bermain bersama, melihat leaderboard, dan menikmati fitur interaktif lainnya.</p>
+      <div class="actions"><a class="btn primary" href="/game">Buka Lobby <span aria-hidden="true"> ↗</span></a><a class="btn" href="/dashboard/game">Dashboard</a></div>
+    </section>
+    <div class="sectionHead"><h2>Pilih permainan</h2><span>5 game tersedia</span></div>
+    <section class="grid" aria-label="Daftar permainan">
+      <a class="card" href="/game/duck"><span class="arrow">↗</span><div class="ico">🦆</div><h3>Duck Pipes</h3><p>Lewati pipa dan kejar skor tertinggi.</p></a>
+      <a class="card" href="/game/tebak-kata"><span class="arrow">↗</span><div class="ico">🧩</div><h3>Tebak Kata</h3><p>Pecahkan kata dari beberapa petunjuk.</p></a>
+      <a class="card" href="/game/akinator"><span class="arrow">↗</span><div class="ico">🧞</div><h3>Akinator</h3><p>Pikirkan sesuatu dan biarkan Akinator menebaknya.</p></a>
+      <a class="card" href="/game/gudang-dorong"><span class="arrow">↗</span><div class="ico">📦</div><h3>Gudang Dorong</h3><p>Dorong kotak ke tujuan di berbagai level.</p></a>
+      <a class="card" href="/game/benteng-saskeh"><span class="arrow">↗</span><div class="ico">🏰</div><h3>Benteng Saskeh</h3><p>Bangun pertahanan dan hadapi gelombang musuh.</p></a>
+      <a class="card" href="/bucin"><span class="arrow">↗</span><div class="ico">💌</div><h3>Bucin</h3><p>Buka halaman Bucin dari Saskeh.</p></a>
+    </section>
+    <section class="extra">
+      <a class="card" href="/game"><div class="ico">🎮</div><div><h3>Lobby & Room</h3><p>Buat atau gabung room permainan.</p></div><span class="arrow">↗</span></a>
+      <a class="card" href="/dashboard/game"><div class="ico">🏆</div><div><h3>Leaderboard</h3><p>Lihat statistik dan papan skor.</p></div><span class="arrow">↗</span></a>
+    </section>
+    <footer class="foot">SASKEH PLAYGROUND<br>Game dan data room berjalan melalui server Saskeh yang terhubung.</footer>
+  </main>
+</body>
+</html>
