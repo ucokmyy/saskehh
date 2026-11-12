@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "include": [
+    "/api/*",
+    "/game*",
+    "/dashboard/*",
+    "/playground-assets/*",
+    "/ytplay/*",
+    "/bucin",
+    "/duck",
+    "/tebak-kata",
+    "/akinator",
+    "/gudang-dorong",
+    "/benteng-saskeh"
+  ],
+  "exclude": []
+}
