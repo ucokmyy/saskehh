@@ -1,0 +1,773 @@
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;min-height:100%;background:transparent}
+body{font-family:Inter,Arial,sans-serif;color:#fff;overflow:hidden;touch-action:none}
+.wrap{width:100%;max-width:680px;margin:auto;padding:12px}
+.card{background:rgba(10,13,20,.97);border:1px solid rgba(255,255,255,.13);border-radius:23px;overflow:hidden;box-shadow:0 22px 60px #0008}
+.head{min-height:70px;padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.09)}
+.back,.copyRoom{height:40px;border:1px solid rgba(255,255,255,.13);border-radius:12px;background:#171b25;color:#fff;font-weight:900}
+.back{width:40px;font-size:25px}.headMain{min-width:0;flex:1}.kicker{font-size:9px;letter-spacing:1.7px;color:#8d96a9;font-weight:900}.title{font-size:19px;font-weight:950;margin-top:2px}
+.room{margin-left:auto;text-align:right}.roomLabel{font-size:8px;letter-spacing:1.4px;color:#737d91;font-weight:900}.roomCode{display:block;margin-top:3px;font-size:14px;letter-spacing:2px}.score{font-size:24px;font-weight:950;margin-left:9px}
+.roomBar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 14px;background:#0d1119;border-bottom:1px solid rgba(255,255,255,.07)}.roomBar span{font-size:10px;color:#697387}.roomBar strong{font-size:15px;letter-spacing:3px}.copyRoom{padding:0 11px;font-size:10px}
+.game{position:relative;width:100%;height:min(500px,70vh);min-height:380px;background:linear-gradient(#76c9ff 0%,#b8e9ff 70%,#91d75b 70%,#6fbd45 100%);overflow:hidden;cursor:pointer}
+canvas{width:100%;height:100%;display:block}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.27);text-align:center;pointer-events:none}
+.overlay.hidden{display:none}.big{font-size:31px;font-weight:950;text-shadow:0 3px 8px #000}.small{margin-top:8px;font-size:13px;color:#eee}
+.btn{display:block;margin:12px auto 14px;padding:11px 22px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#181d28;color:#fff;font-weight:900}
+@media(max-height:600px){.game{height:420px;min-height:320px}}
+</style>
+
+
+<div class="wrap">
+  <div class="card">
+
+    <div class="head">
+      <button class="back" id="back" aria-label="Kembali">‹</button>
+      <div class="headMain">
+        <div class="kicker">SASKEH GAME</div>
+        <div class="title">Duck Pipes</div>
+      </div>
+      <div class="room"><span class="roomLabel">ROOM</span><strong class="roomCode" id="roomCode">------</strong></div>
+      <div class="score" id="score">0</div>
+    </div>
+    <div class="roomBar">
+      <div><span>Kode room</span> <strong id="roomCodeBar">------</strong></div>
+      <button class="copyRoom" id="copyRoom">Salin</button>
+    </div>
+
+    <div class="game" id="game">
+
+      <canvas id="canvas"></canvas>
+
+      <div class="overlay" id="overlay">
+        <div class="big">🦆 Duck Pipes</div>
+        <div class="small">tap layar untuk terbang</div>
+      </div>
+
+    </div>
+
+    <button class="btn" id="reset">main lagi</button>
+
+  </div>
+</div>
+
+<!--
+  AUDIO SUDAH DI DOWNLOAD OLEH NODE.JS
+  TIDAK ADA FETCH URL DARI HTML
+-->
+
+<audio
+  id="flapSound"
+  preload="auto"
+  src="data:audio/mpeg;base64,__AUDIO_BASE64__">
+</audio>
+
+<script>
+
+const game=document.getElementById('game');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+
+const scoreEl=document.getElementById('score');
+const overlay=document.getElementById('overlay');
+const reset=document.getElementById('reset');
+const flapSound=document.getElementById('flapSound');
+
+let W=0;
+let H=0;
+let dpr=1;
+
+function resize(){
+
+  const r=game.getBoundingClientRect();
+
+  dpr=Math.min(
+    window.devicePixelRatio||1,
+    2
+  );
+
+  W=r.width;
+  H=r.height;
+
+  canvas.width=W*dpr;
+  canvas.height=H*dpr;
+
+  ctx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+}
+
+resize();
+
+window.addEventListener(
+  'resize',
+  resize
+);
+
+function playFlapSound(){
+
+  try{
+
+    flapSound.pause();
+
+    flapSound.currentTime=0;
+
+    const promise=flapSound.play();
+
+    if(promise){
+      promise.catch(()=>{});
+    }
+
+  }catch(e){}
+
+}
+
+let duck;
+let pipes;
+let score;
+let running;
+let gameOver;
+let lastTime;
+let spawnTimer;
+
+function resetGame(){
+
+  duck={
+    x:W*.25,
+    y:H*.45,
+    vy:0,
+    r:17,
+    rotation:0
+  };
+
+  pipes=[];
+
+  score=0;
+
+  running=false;
+
+  gameOver=false;
+
+  lastTime=0;
+
+  spawnTimer=0;
+
+  scoreEl.textContent='0';
+
+  overlay.innerHTML=
+    '<div class="big">🦆 Duck Pipes</div>'+
+    '<div class="small">tap layar untuk terbang</div>';
+
+  overlay.classList.remove('hidden');
+
+  try{
+    flapSound.pause();
+    flapSound.currentTime=0;
+  }catch(e){}
+
+  draw();
+}
+
+function start(){
+
+  if(gameOver)return;
+
+  if(!running){
+
+    running=true;
+
+    overlay.classList.add('hidden');
+
+    lastTime=performance.now();
+
+    requestAnimationFrame(loop);
+  }
+
+  flap();
+}
+
+function flap(){
+
+  if(gameOver)return;
+
+  duck.vy=-430;
+
+  
+  playFlapSound();
+}
+
+function addPipe(){
+
+  const difficulty=
+    Math.min(score/25,1);
+
+  const gap=
+    155-(difficulty*45);
+
+  const minTop=55;
+
+  const maxTop=
+    H-100-gap;
+
+  const top=
+    minTop+
+    Math.random()*
+    Math.max(
+      20,
+      maxTop-minTop
+    );
+
+  pipes.push({
+
+    x:W+30,
+
+    width:58,
+
+    top:top,
+
+    gap:gap,
+
+    passed:false
+
+  });
+}
+
+function loop(time){
+
+  if(!running)return;
+
+  const dt=
+    Math.min(
+      (time-lastTime)/1000,
+      .035
+    );
+
+  lastTime=time;
+
+  update(dt);
+
+  draw();
+
+  if(!gameOver){
+
+    requestAnimationFrame(loop);
+
+  }
+}
+
+function update(dt){
+
+  
+
+  duck.vy+=1250*dt;
+
+  duck.y+=duck.vy*dt;
+
+  duck.rotation=Math.max(
+    -0.5,
+    Math.min(
+      1.1,
+      duck.vy/650
+    )
+  );
+
+  
+
+  const difficulty=
+    Math.min(score/30,1);
+
+  const speed=
+    220+(difficulty*130);
+
+  const spawnRate=
+    1.55-(difficulty*.55);
+
+  spawnTimer+=dt;
+
+  if(spawnTimer>=spawnRate){
+
+    spawnTimer=0;
+
+    addPipe();
+
+  }
+
+  
+
+  for(
+    let i=pipes.length-1;
+    i>=0;
+    i--
+  ){
+
+    const p=pipes[i];
+
+    p.x-=speed*dt;
+
+    
+
+    if(
+      !p.passed &&
+      p.x+p.width<duck.x
+    ){
+
+      p.passed=true;
+
+      score++;
+
+      scoreEl.textContent=score;
+
+    }
+
+    
+
+    if(
+      p.x+p.width<-30
+    ){
+
+      pipes.splice(i,1);
+
+    }
+  }
+
+  
+
+  if(
+    duck.y-duck.r<0 ||
+    duck.y+duck.r>H
+  ){
+
+    die();
+
+    return;
+  }
+
+  
+
+  for(const p of pipes){
+
+    const hitX=
+      duck.x+duck.r>p.x &&
+      duck.x-duck.r<
+      p.x+p.width;
+
+    const hitTop=
+      duck.y-duck.r<p.top;
+
+    const bottomY=
+      p.top+p.gap;
+
+    const hitBottom=
+      duck.y+duck.r>bottomY;
+
+    if(
+      hitX &&
+      (hitTop||hitBottom)
+    ){
+
+      die();
+
+      return;
+
+    }
+  }
+}
+
+function die(){
+  saveDuckScore(score);
+
+  gameOver=true;
+
+  running=false;
+
+  try{
+
+    flapSound.pause();
+
+    flapSound.currentTime=0;
+
+  }catch(e){}
+
+  overlay.innerHTML=
+    '<div class="big">💥 GAME OVER</div>'+
+    '<div class="small">skor kamu: '+score+'</div>';
+
+  overlay.classList.remove('hidden');
+}
+
+function draw(){
+
+  ctx.clearRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+  drawBackground();
+
+  for(const p of pipes){
+
+    drawPipe(p);
+
+  }
+
+  drawDuck();
+}
+
+function drawBackground(){
+
+  
+
+  ctx.fillStyle=
+    'rgba(255,255,255,.55)';
+
+  cloud(
+    75,
+    75,
+    1
+  );
+
+  cloud(
+    W*.65,
+    120,
+    .8
+  );
+
+  cloud(
+    W*.85,
+    55,
+    .65
+  );
+
+  
+
+  ctx.fillStyle='#72bd42';
+
+  ctx.fillRect(
+    0,
+    H-45,
+    W,
+    45
+  );
+
+  ctx.fillStyle='#5b9e37';
+
+  for(
+    let x=0;
+    x<W;
+    x+=35
+  ){
+
+    ctx.fillRect(
+      x,
+      H-45,
+      18,
+      5
+    );
+
+  }
+}
+
+function cloud(x,y,s){
+
+  ctx.beginPath();
+
+  ctx.arc(
+    x,
+    y,
+    16*s,
+    0,
+    Math.PI*2
+  );
+
+  ctx.arc(
+    x+18*s,
+    y-7*s,
+    20*s,
+    0,
+    Math.PI*2
+  );
+
+  ctx.arc(
+    x+40*s,
+    y,
+    15*s,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+}
+
+function drawPipe(p){
+
+  const bottomY=
+    p.top+p.gap;
+
+  
+
+  ctx.fillStyle='#49a942';
+
+  ctx.fillRect(
+    p.x,
+    0,
+    p.width,
+    p.top
+  );
+
+  ctx.fillStyle='#62c957';
+
+  ctx.fillRect(
+    p.x-5,
+    p.top-20,
+    p.width+10,
+    20
+  );
+
+  
+
+  ctx.fillStyle='#49a942';
+
+  ctx.fillRect(
+    p.x,
+    bottomY,
+    p.width,
+    H-bottomY
+  );
+
+  ctx.fillStyle='#62c957';
+
+  ctx.fillRect(
+    p.x-5,
+    bottomY,
+    p.width+10,
+    20
+  );
+
+  
+
+  ctx.fillStyle=
+    'rgba(255,255,255,.13)';
+
+  ctx.fillRect(
+    p.x+8,
+    0,
+    7,
+    p.top
+  );
+
+  ctx.fillRect(
+    p.x+8,
+    bottomY,
+    7,
+    H-bottomY
+  );
+}
+
+function drawDuck(){
+
+  ctx.save();
+
+  ctx.translate(
+    duck.x,
+    duck.y
+  );
+
+  ctx.rotate(
+    duck.rotation
+  );
+
+  
+
+  ctx.fillStyle='#ffd83d';
+
+  ctx.beginPath();
+
+  ctx.arc(
+    0,
+    0,
+    duck.r,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+
+  
+
+  ctx.fillStyle='#e9b927';
+
+  ctx.beginPath();
+
+  ctx.ellipse(
+    -5,
+    8,
+    12,
+    7,
+    -.5,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+
+  
+
+  ctx.fillStyle='#ffe45b';
+
+  ctx.beginPath();
+
+  ctx.arc(
+    7,
+    -9,
+    13,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+
+  
+
+  ctx.fillStyle='#111';
+
+  ctx.beginPath();
+
+  ctx.arc(
+    11,
+    -12,
+    2.4,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+
+  
+
+  ctx.fillStyle='#ff9633';
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    17,
+    -7
+  );
+
+  ctx.lineTo(
+    31,
+    -2
+  );
+
+  ctx.lineTo(
+    17,
+    2
+  );
+
+  ctx.closePath();
+
+  ctx.fill();
+
+  ctx.restore();
+}
+
+game.addEventListener(
+  'pointerdown',
+  e=>{
+
+    e.preventDefault();
+
+    if(gameOver)return;
+
+    start();
+
+  }
+);
+
+reset.addEventListener(
+  'pointerdown',
+  e=>{
+
+    e.preventDefault();
+
+    resetGame();
+
+  }
+);
+
+document.addEventListener(
+  'keydown',
+  e=>{
+
+    if(e.code==='Space'){
+
+      e.preventDefault();
+
+      start();
+
+    }
+
+  }
+);
+
+resetGame();
+
+</script>
+<script>
+let GAME_ROOM=new URLSearchParams(location.search).get('room')||''
+let GAME_PLAYER=new URLSearchParams(location.search).get('player')||''
+try{
+  if(!/^\d{6}$/.test(GAME_ROOM))GAME_ROOM=localStorage.getItem('saskeh_game_room')||''
+  if(!GAME_PLAYER)GAME_PLAYER=localStorage.getItem('saskeh_game_player')||''
+}catch{}
+if(/^\d{6}$/.test(GAME_ROOM)&&GAME_PLAYER){
+  try{
+    localStorage.setItem('saskeh_game_room',GAME_ROOM)
+    localStorage.setItem('saskeh_game_player',GAME_PLAYER)
+  }catch{}
+}
+const roomCodeEl=document.getElementById('roomCode')
+const roomCodeBarEl=document.getElementById('roomCodeBar')
+roomCodeEl.textContent=/^\d{6}$/.test(GAME_ROOM)?GAME_ROOM:'------'
+roomCodeBarEl.textContent=/^\d{6}$/.test(GAME_ROOM)?GAME_ROOM:'------'
+document.getElementById('back').onclick=()=>location.assign('/dashboard/game?room='+encodeURIComponent(GAME_ROOM)+'&player='+encodeURIComponent(GAME_PLAYER))
+document.getElementById('copyRoom').onclick=async()=>{
+  if(!/^\d{6}$/.test(GAME_ROOM))return
+  let ok=false
+  try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(GAME_ROOM);ok=true}}catch{}
+  if(!ok)try{
+    const area=document.createElement('textarea')
+    area.value=GAME_ROOM;area.setAttribute('readonly','');area.style.position='fixed';area.style.left='-9999px'
+    document.body.appendChild(area);area.select();ok=document.execCommand('copy');area.remove()
+  }catch{}
+  const b=document.getElementById('copyRoom')
+  b.textContent=ok?'✓ Tersalin':'Gagal'
+  setTimeout(()=>b.textContent='Salin',1200)
+}
+let DUCK_SESSION=''
+const DUCK_SESSION_READY=(async()=>{
+  if(!/^\d{6}$/.test(GAME_ROOM)||!GAME_PLAYER){
+    location.assign('/game')
+    return
+  }
+  try{
+    const response=await fetch('/api/game/session/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:GAME_ROOM,player:GAME_PLAYER,game:'duck'}),cache:'no-store'})
+    const data=await response.json()
+    if(data.ok){DUCK_SESSION=data.sessionId;return}
+  }catch{}
+  location.assign('/dashboard/game?room='+encodeURIComponent(GAME_ROOM)+'&player='+encodeURIComponent(GAME_PLAYER))
+})()
+async function saveDuckScore(value){
+  await DUCK_SESSION_READY
+  if(!DUCK_SESSION)return
+  try{
+    await fetch('/api/game/scores',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:DUCK_SESSION,score:Number(value)||0}),cache:'no-store'})
+  }catch{}
+}
+</script>

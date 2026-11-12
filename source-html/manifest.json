@@ -1,0 +1,13 @@
+{
+  "source_archive": "saskeh esm.zip",
+  "source_files": [
+    "html/approve.js",
+    "html/akinator.html",
+    "html/benteng-saskeh.html",
+    "html/bucin.html",
+    "html/duck.html",
+    "html/gudang-dorong.html",
+    "html/tebak-kata.html"
+  ],
+  "note": "Source copies only; backend keeps serving its own html/ files from Pterodactyl."
+}

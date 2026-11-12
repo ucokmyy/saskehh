@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#080a0f">
+<title>Saskeh Game — Akinator</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;font-family:Inter,Arial,sans-serif;background:#080a0f;color:#fff}
+body{background:radial-gradient(circle at 20% 0%,#252039 0,#0c0e15 40%,#07080c 100%)}
+button,select{font:inherit}
+.wrap{width:min(760px,100%);margin:auto;padding:16px 15px 42px}
+.top{display:flex;align-items:center;gap:11px;padding:3px 1px}
+.back{width:44px;height:44px;border:1px solid #2a3040;border-radius:14px;background:#11151e;color:#fff;font-size:27px;font-weight:900}
+.brand{font-size:11px;letter-spacing:1.8px;color:#8f98ab;font-weight:900}
+.title{font-size:20px;font-weight:950;margin-top:3px}
+.roomMini{margin-left:auto;text-align:right;color:#727c90;font-size:9px;letter-spacing:1.4px;font-weight:900}
+.roomMini strong{display:block;margin-top:3px;color:#fff;font-size:14px;letter-spacing:2px}
+.roomBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 12px;padding:13px 15px;border:1px solid #2d3445;background:#11151e;border-radius:17px}
+.roomBar span{color:#747e92;font-size:11px}.roomBar strong{font-size:18px;letter-spacing:3px}
+.roomActions{display:flex;gap:7px}.miniBtn{height:36px;padding:0 11px;border:1px solid #343b4d;border-radius:11px;background:#191e29;color:#fff;font-size:11px;font-weight:850}
+.card{border:1px solid #2a3040;background:linear-gradient(145deg,#151824,#0d1017);border-radius:25px;padding:18px;box-shadow:0 22px 60px #0007}
+.start{padding:23px}.eyebrow{font-size:10px;color:#8b72ff;font-weight:950;letter-spacing:2px}.start h1{font-size:35px;line-height:1.05;margin:8px 0 10px}.start p{color:#80899c;line-height:1.55;font-size:13px}
+.themeGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:17px}
+.theme{min-height:82px;border:1px solid #30374a;border-radius:17px;background:#0c0f16;color:#fff;padding:12px 7px;font-weight:900}
+.theme.active{border-color:#8b72ff;background:#18152a;box-shadow:0 0 0 3px #8b72ff16}.theme b{display:block;font-size:25px;margin-bottom:5px}.theme span{font-size:11px;color:#9099aa}
+.primary{width:100%;height:54px;margin-top:14px;border:0;border-radius:16px;background:#fff;color:#080a0f;font-weight:950}.primary:disabled{opacity:.5}
+.meta{display:flex;justify-content:space-between;gap:10px;color:#818b9f;font-size:12px}.meta strong{color:#fff}
+.progressWrap{height:7px;background:#202533;border-radius:99px;overflow:hidden;margin-top:12px}.progress{height:100%;width:0;background:#8b72ff;border-radius:99px;transition:width .35s ease}
+.question{min-height:170px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:25px;line-height:1.4;font-weight:900;padding:22px 5px}
+.akinatorBox{display:grid;grid-template-columns:130px 1fr;gap:18px;align-items:center}.avatar{width:130px;height:170px;border-radius:21px;border:1px solid #30374a;background:linear-gradient(160deg,#211d37,#10131c);display:flex;align-items:center;justify-content:center;overflow:hidden}.avatar img{width:100%;height:100%;object-fit:contain}.avatar .face{font-size:70px}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:9px}.answer{min-height:57px;border:1px solid #343b4d;border-radius:15px;background:#11151e;color:#fff;font-weight:900;font-size:14px}.answer:active{transform:scale(.98)}.answer.yes{border-color:#276b49}.answer.no{border-color:#713c45}.answer.idk{border-color:#4c566a}.answer.prob{border-color:#635a30}
+.tools{display:flex;gap:8px;margin-top:12px}.tool{flex:1;height:44px;border:1px solid #30374a;border-radius:13px;background:#11151e;color:#fff;font-size:11px;font-weight:900}.tool:disabled{opacity:.35}
+.notice{min-height:20px;margin-top:12px;color:#778195;font-size:11px;text-align:center;line-height:1.5}
+.result{text-align:center;padding:8px 0 3px}.resultBadge{display:inline-flex;padding:7px 10px;border-radius:99px;background:#211d37;color:#a996ff;font-size:10px;font-weight:950;letter-spacing:1px}.result h2{font-size:29px;margin:12px 0 6px}.result p{color:#818a9c;font-size:12px;line-height:1.55}.result img{display:block;width:min(210px,75%);height:230px;object-fit:contain;margin:12px auto;border-radius:20px;background:#0c0f16}.score{font-size:38px;font-weight:950;margin:10px 0}.resultBtns{display:flex;gap:9px}.resultBtns button{flex:1;height:49px;border-radius:14px;border:1px solid #30374a;background:#11151e;color:#fff;font-weight:900}.resultBtns .main{border:0;background:#fff;color:#080a0f}
+.loading{text-align:center;padding:50px 10px;color:#7c8597}.spinner{width:38px;height:38px;border:3px solid #2b3040;border-top-color:#8b72ff;border-radius:50%;margin:0 auto 13px;animation:spin .8s linear infinite}
+.music{position:fixed;right:14px;bottom:14px;width:44px;height:44px;border-radius:50%;border:1px solid #343b4d;background:#11151e;color:#fff;box-shadow:0 10px 30px #0008;font-size:17px;z-index:20}
+@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:560px){.akinatorBox{grid-template-columns:92px 1fr}.avatar{width:92px;height:126px}.avatar .face{font-size:50px}.question{font-size:21px;min-height:145px}.answers{grid-template-columns:1fr}.themeGrid{grid-template-columns:1fr 1fr 1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="top">
+<button class="back" id="back" aria-label="Kembali">‹</button>
+<div><div class="brand">SASKEH GAME</div><div class="title">Akinator</div></div>
+<div class="roomMini">ROOM<strong id="roomMini">------</strong></div>
+</header>
+<div class="roomBar">
+<div><span>Kode room</span><br><strong id="roomCode">------</strong></div>
+<div class="roomActions"><button class="miniBtn" id="copyRoom">Salin</button><button class="miniBtn" id="dashboard">Dashboard</button></div>
+</div>
+
+<section class="card" id="card">
+<div class="loading"><div class="spinner"></div>Memuat Akinator...</div>
+</section>
+<div class="notice" id="notice"></div>
+</main>
+
+<button class="music" id="music" aria-label="Musik">🔊</button>
+<audio id="bgm" preload="auto" loop playsinline src="data:audio/mpeg;base64,__AKINATOR_AUDIO_BASE64__"></audio>
+
+<script>
+const $=id=>document.getElementById(id)
+const params=new URLSearchParams(location.search)
+let room=params.get('room')||''
+let player=params.get('player')||''
+let game=null
+let busy=false
+let selectedTheme='characters'
+let musicOn=true
+
+function recoverSession(){
+  try{
+    if(!/^\d{6}$/.test(room))room=localStorage.getItem('saskeh_game_room')||''
+    if(!player)player=localStorage.getItem('saskeh_game_player')||''
+  }catch{}
+}
+function saveSession(){
+  try{
+    localStorage.setItem('saskeh_game_room',room)
+    localStorage.setItem('saskeh_game_player',player)
+  }catch{}
+}
+function dashboard(){location.assign('/dashboard/game?room='+encodeURIComponent(room)+'&player='+encodeURIComponent(player))}
+function back(){dashboard()}
+function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+async function post(url,data){
+  const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},credentials:'same-origin',body:JSON.stringify(data),cache:'no-store'})
+  let d={}
+  try{d=await r.json()}catch{}
+  if(!r.ok&&!d.message)d.message='Server gagal memproses permintaan.'
+  return d
+}
+async function copyRoom(){
+  let ok=false
+  try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(room);ok=true}}catch{}
+  if(!ok)try{
+    const area=document.createElement('textarea');area.value=room;area.setAttribute('readonly','');area.style.position='fixed';area.style.left='-9999px'
+    document.body.appendChild(area);area.select();ok=document.execCommand('copy');area.remove()
+  }catch{}
+  $('copyRoom').textContent=ok?'✓ Tersalin':'Gagal'
+  setTimeout(()=>{$('copyRoom').textContent='Salin'},1200)
+}
+async function playMusic(){
+  const a=$('bgm')
+  try{
+    if(musicOn){a.volume=.34;await a.play();$('music').textContent='🔊'}
+    else{a.pause();$('music').textContent='🔇'}
+  }catch{
+    musicOn=true
+    $('music').textContent='🔊'
+  }
+}
+function unlockMusic(){
+  if(musicOn)playMusic()
+}
+function startScreen(){
+  $('card').innerHTML='<div class="start"><div class="eyebrow">TEBAK PIKIRAN</div><h1>Aku akan menebak yang kamu pikirkan.</h1><p>Pilih kategori, pikirkan satu karakter, hewan, atau benda, lalu jawab setiap pertanyaan sejujur mungkin.</p><div class="themeGrid"><button class="theme active" data-theme="characters"><b>🎭</b><span>Karakter</span></button><button class="theme" data-theme="animals"><b>🐾</b><span>Hewan</span></button><button class="theme" data-theme="objects"><b>🧩</b><span>Benda</span></button></div><button class="primary" id="startGame">Mulai Akinator</button></div>'
+  document.querySelectorAll('.theme').forEach(b=>b.onclick=()=>{selectedTheme=b.dataset.theme;document.querySelectorAll('.theme').forEach(x=>x.classList.toggle('active',x===b))})
+  $('startGame').onclick=startGame
+}
+function renderQuestion(){
+  const p=Math.max(0,Math.min(100,Number(game.progression)||0))
+  const image=game.akitude?String(game.akitude):''
+  $('card').innerHTML='<div class="meta"><span>Pertanyaan <strong>#'+Number(game.step||0)+'</strong></span><span><strong>'+p.toFixed(0)+'%</strong></span></div><div class="progressWrap"><div class="progress" style="width:'+p+'%"></div></div><div class="akinatorBox"><div class="avatar">'+(image&&image!=='defi.png'?'<img src="'+esc(image)+'" alt="Akinator">':'<div class="face">🎩</div>')+'</div><div class="question">'+esc(game.question||'...')+'</div></div><div class="answers"><button class="answer yes" data-answer="0">✓ Ya</button><button class="answer no" data-answer="1">✕ Tidak</button><button class="answer idk" data-answer="2">? Tidak tahu</button><button class="answer prob" data-answer="3">~ Mungkin</button><button class="answer prob" data-answer="4">≈ Mungkin tidak</button></div><div class="tools"><button class="tool" id="backAnswer" '+(Number(game.step||0)<=0?'disabled':'')+'>‹ Mundur</button><button class="tool" id="exclude">Bukan ini</button><button class="tool" id="stop">Berhenti</button></div>'
+  document.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>answer(Number(b.dataset.answer)))
+  $('backAnswer').onclick=goBack
+  $('exclude').onclick=exclude
+  $('stop').onclick=stopGame
+}
+async function startGame(){
+  if(busy)return
+  busy=true
+  $('notice').textContent='Memanggil Akinator...'
+  try{
+    const d=await post('/api/game/akinator/start',{room,player,theme:selectedTheme})
+    if(!d.ok)throw new Error(d.message||'Gagal memulai Akinator.')
+    game=d.game
+    renderQuestion()
+    $('notice').textContent=''
+    playMusic()
+  }catch(e){
+    $('notice').textContent=e.message||'Gagal memulai Akinator.'
+  }finally{busy=false}
+}
+async function answer(answer){
+  if(busy||!game)return
+  busy=true
+  document.querySelectorAll('[data-answer]').forEach(b=>b.disabled=true)
+  $('notice').textContent='Akinator sedang berpikir...'
+  try{
+    const d=await post('/api/game/akinator/answer',{sessionId:game.sessionId,answer})
+    if(!d.ok)throw new Error(d.message||'Gagal memproses jawaban.')
+    if(d.won){renderResult(d);return}
+    game={...game,...d.game}
+    renderQuestion()
+    $('notice').textContent=''
+  }catch(e){
+    $('notice').textContent=e.message||'Gagal memproses jawaban.'
+  }finally{busy=false}
+}
+async function goBack(){
+  if(busy||!game||Number(game.step||0)<=0)return
+  busy=true;$('notice').textContent='Mengembalikan pertanyaan...'
+  try{
+    const d=await post('/api/game/akinator/back',{sessionId:game.sessionId})
+    if(!d.ok)throw new Error(d.message||'Gagal mundur.')
+    game={...game,...d.game};renderQuestion();$('notice').textContent=''
+  }catch(e){$('notice').textContent=e.message||'Gagal mundur.'}
+  finally{busy=false}
+}
+async function exclude(){
+  if(busy||!game)return
+  busy=true;$('notice').textContent='Mencari kemungkinan lain...'
+  try{
+    const d=await post('/api/game/akinator/exclude',{sessionId:game.sessionId})
+    if(!d.ok)throw new Error(d.message||'Gagal mencari kemungkinan lain.')
+    game={...game,...d.game};renderQuestion();$('notice').textContent=''
+  }catch(e){$('notice').textContent=e.message||'Gagal exclude.'}
+  finally{busy=false}
+}
+async function stopGame(){
+  if(busy||!game)return
+  busy=true
+  try{await post('/api/game/akinator/stop',{sessionId:game.sessionId})}catch{}
+  game=null
+  startScreen()
+  $('notice').textContent='Permainan dihentikan.'
+  busy=false
+}
+function renderResult(d){
+  const result=d.result||{}
+  const photo=result.photo?'<img src="'+esc(result.photo)+'" alt="'+esc(result.name||'Hasil')+'">':''
+  $('card').innerHTML='<div class="result"><div class="resultBadge">🎯 AKINATOR MENEBak</div>'+photo+'<h2>'+esc(result.name||'Tidak diketahui')+'</h2><p>'+esc(result.description||'Akinator berhasil menemukan jawaban.')+'</p><div class="score">'+Number(d.score||0)+' pts</div><p>'+Number(d.steps||0)+' pertanyaan digunakan.</p><div class="resultBtns"><button id="dashResult">Dashboard</button><button class="main" id="again">Main lagi</button></div></div>'
+  $('dashResult').onclick=dashboard
+  $('again').onclick=()=>{game=null;startScreen();playMusic()}
+  $('notice').textContent=''
+}
+$('back').onclick=back
+$('dashboard').onclick=dashboard
+$('copyRoom').onclick=copyRoom
+$('music').onclick=()=>{musicOn=!musicOn;playMusic()}
+document.addEventListener('pointerdown',unlockMusic,{passive:true})
+document.addEventListener('keydown',unlockMusic,{passive:true})
+window.addEventListener('pageshow',recoverSession)
+
+async function start(){
+  recoverSession()
+  if(!/^\d{6}$/.test(room)||!player){location.assign('/game');return}
+  saveSession()
+  $('roomCode').textContent=room
+  $('roomMini').textContent=room
+  startScreen()
+  try{
+    const r=await fetch('/api/game/akinator/active?room='+encodeURIComponent(room)+'&player='+encodeURIComponent(player),{cache:'no-store'})
+    const d=await r.json()
+    if(d.ok&&d.game){game=d.game;renderQuestion();playMusic();return}
+  }catch{}
+  playMusic()
+}
+start()
+</script>
+</body>
+</html>

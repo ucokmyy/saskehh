@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#080a0f">
+<title>Tebak Kata — Saskeh Game</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{font-family:Inter,Arial,sans-serif;color:#fff;background:#080a0f}
+html,body{margin:0;min-height:100%;background:radial-gradient(circle at 20% 0%,#22243b 0,#0d1018 38%,#07080c 100%)}
+body{min-height:100vh}
+button,input{font:inherit}
+.wrap{width:min(680px,100%);margin:auto;padding:14px 15px 32px}
+.top{display:flex;align-items:center;gap:10px;padding:3px 0 14px}
+.back{width:44px;height:44px;border:1px solid #2c3344;border-radius:14px;background:#121620;color:#fff;font-size:27px}
+.brand{font-size:10px;letter-spacing:1.8px;color:#8d97ab;font-weight:900}.title{font-size:20px;font-weight:950;margin-top:3px}
+.roomMini{margin-left:auto;text-align:right;color:#727c90;font-size:9px;letter-spacing:1.4px;font-weight:900}.roomMini strong{display:block;margin-top:3px;color:#fff;font-size:14px;letter-spacing:2px}
+.roomBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;padding:13px 15px;border:1px solid #2d3445;background:#11151e;border-radius:17px}.roomBar span{color:#747e92;font-size:11px}.roomBar strong{font-size:18px;letter-spacing:3px}.roomActions{display:flex;gap:7px}.miniBtn{height:36px;padding:0 11px;border:1px solid #343b4d;border-radius:11px;background:#191e29;color:#fff;font-size:11px;font-weight:850}
+.card{border:1px solid #2a3040;background:linear-gradient(145deg,#131722,#0e1118);border-radius:24px;padding:20px;box-shadow:0 22px 60px #0007}
+.meta{display:flex;justify-content:space-between;gap:10px;color:#818b9f;font-size:12px}.meta strong{color:#fff}.question{min-height:170px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:25px;line-height:1.45;font-weight:900;padding:22px 5px}.input{width:100%;height:58px;border:1px solid #30384a;border-radius:16px;background:#090c12;color:#fff;outline:0;text-align:center;font-size:18px}.input:focus{border-color:#8b72ff;box-shadow:0 0 0 4px #8b72ff18}.feedback{min-height:50px;margin-top:12px;border-radius:15px;padding:14px;text-align:center;font-weight:900;display:none}.feedback.ok{display:block;background:#0d2c1c;border:1px solid #217749;color:#62f19c}.feedback.bad{display:block;background:#37131a;border:1px solid #9d3845;color:#ff858e;animation:shake .3s ease}.submit{width:100%;height:55px;margin-top:12px;border:0;border-radius:16px;background:#fff;color:#080a0f;font-weight:950;font-size:15px}.submit:disabled{opacity:.5}.hint{text-align:center;color:#687286;font-size:11px;margin-top:11px}.done{text-align:center;padding:35px 4px 18px}.done .emoji{font-size:42px}.done .score{font-size:54px;font-weight:950;margin:8px 0}.done p{color:#788196;font-size:13px}.done button{height:50px;padding:0 20px;border:0;border-radius:14px;background:#fff;color:#080a0f;font-weight:900}
+.notice{margin-top:10px;color:#697387;font-size:11px;text-align:center;line-height:1.5}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="top">
+<button class="back" id="back" aria-label="Kembali">‹</button>
+<div><div class="brand">SASKEH GAME</div><div class="title">Tebak Kata</div></div>
+<div class="roomMini">ROOM<strong id="roomMini">------</strong></div>
+</header>
+<div class="roomBar">
+<div><span>Kode room</span><br><strong id="roomCode">------</strong></div>
+<div class="roomActions"><button class="miniBtn" id="copyRoom">Salin</button><button class="miniBtn" id="dashboard">Dashboard</button></div>
+</div>
+<section class="card" id="card">
+<div class="meta"><span id="progress">Soal -</span><span>Skor <strong id="score">0</strong></span></div>
+<div class="question" id="question">Memuat soal...</div>
+<input class="input" id="answer" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Tulis jawaban">
+<div class="feedback" id="feedback"></div>
+<button class="submit" id="submit">Jawab</button>
+<div class="hint">Tekan Enter untuk menjawab</div>
+</section>
+<div class="notice" id="notice"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id)
+const params=new URLSearchParams(location.search)
+let room=params.get('room')||''
+let player=params.get('player')||''
+let sessionId=''
+let busy=false
+let finished=false
+function recoverSession(){
+    try{
+        if(!/^\d{6}$/.test(room))room=localStorage.getItem('saskeh_game_room')||''
+        if(!player)player=localStorage.getItem('saskeh_game_player')||''
+    }catch{}
+}
+function saveSession(){
+    try{
+        if(/^\d{6}$/.test(room)&&player){
+            localStorage.setItem('saskeh_game_room',room)
+            localStorage.setItem('saskeh_game_player',player)
+        }
+    }catch{}
+}
+function dashboard(){location.assign('/dashboard/game?room='+encodeURIComponent(room)+'&player='+encodeURIComponent(player))}
+function back(){dashboard()}
+function feedback(correct,text){
+    const el=$('feedback')
+    el.className='feedback '+(correct?'ok':'bad')
+    el.textContent=text
+}
+function showQuestion(q){
+    $('question').textContent=q.soal
+    $('progress').textContent='Soal '+q.number+' / '+q.total
+}
+async function post(url,data){
+    const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data),cache:'no-store'})
+    let d={}
+    try{d=await r.json()}catch{}
+    if(!r.ok&&!d.message)d.message='Server gagal memproses permintaan.'
+    return d
+}
+async function copyRoom(){
+    let ok=false
+    try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(room);ok=true}}catch{}
+    if(!ok)try{
+        const area=document.createElement('textarea')
+        area.value=room;area.setAttribute('readonly','');area.style.position='fixed';area.style.left='-9999px'
+        document.body.appendChild(area);area.select();ok=document.execCommand('copy');area.remove()
+    }catch{}
+    $('copyRoom').textContent=ok?'✓ Tersalin':'Gagal'
+    setTimeout(()=>{$('copyRoom').textContent='Salin'},1200)
+}
+async function start(){
+    recoverSession()
+    if(!/^\d{6}$/.test(room)||!player){
+        location.assign('/game')
+        return
+    }
+    saveSession()
+    $('roomCode').textContent=room
+    $('roomMini').textContent=room
+    $('notice').textContent='Menyiapkan sesi...'
+    try{
+        const data=await post('/api/game/tebak-kata/start',{room,player})
+        if(!data.ok)throw new Error(data.message||'Gagal memulai game.')
+        sessionId=data.sessionId
+        $('score').textContent=data.score
+        showQuestion(data.question)
+        $('notice').textContent=''
+        $('answer').focus()
+    }catch(error){
+        $('notice').textContent=error.message||'Gagal memulai game.'
+        $('submit').disabled=true
+        setTimeout(dashboard,1200)
+    }
+}
+async function answer(){
+    if(busy||finished||!sessionId)return
+    const input=$('answer')
+    const value=input.value.trim()
+    if(!value)return
+    busy=true
+    $('submit').disabled=true
+    try{
+        const data=await post('/api/game/tebak-kata/answer',{sessionId,answer:value})
+        if(!data.ok)throw new Error(data.message||'Gagal memproses jawaban.')
+        $('score').textContent=data.score
+        if(data.correct){
+            feedback(true,'BENAR  +'+data.points)
+        }else{
+            feedback(false,'Belum tepat')
+            if(navigator.vibrate)navigator.vibrate([70,35,70])
+        }
+        input.value=''
+        if(data.finished){
+            finished=true
+            setTimeout(()=>{
+                $('card').innerHTML='<div class="done"><div class="emoji">🏆</div><div>Selesai!</div><div class="score">'+data.score+'</div><p>Semua soal sudah dijawab.</p><button id="doneBack">Kembali ke Dashboard</button></div>'
+                $('doneBack').onclick=dashboard
+            },550)
+        }else{
+            setTimeout(()=>{
+                feedback(false,'')
+                $('feedback').className='feedback'
+                showQuestion(data.question)
+                busy=false
+                $('submit').disabled=false
+                input.focus()
+            },500)
+        }
+    }catch(error){
+        feedback(false,error.message||'Gagal memproses jawaban.')
+        busy=false
+        $('submit').disabled=false
+    }
+}
+$('back').onclick=back
+$('dashboard').onclick=dashboard
+$('copyRoom').onclick=copyRoom
+$('submit').onclick=answer
+$('answer').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();answer()}})
+window.addEventListener('pageshow',recoverSession)
+start()
+</script>
+</body>
+</html>

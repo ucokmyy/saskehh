@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#080a0f">
+<title>Gudang Dorong — Saskeh Game</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;min-height:100%;background:radial-gradient(circle at 20% 0,#22243b,#0d1018 40%,#07080c)}
+body{font-family:Inter,Arial,sans-serif;color:#fff;min-height:100vh}
+button{font:inherit;color:inherit}
+.wrap{width:min(560px,100%);margin:auto;padding:14px 14px 28px}
+.top{display:flex;align-items:center;gap:10px;padding-bottom:12px}
+.back{width:44px;height:44px;border:1px solid #2c3344;border-radius:14px;background:#121620;font-size:26px}
+.brand{font-size:10px;letter-spacing:1.8px;color:#8d97ab;font-weight:900}.title{font-size:20px;font-weight:950;margin-top:3px}
+.room{margin-left:auto;text-align:right;color:#727c90;font-size:9px;letter-spacing:1.4px;font-weight:900}.room b{display:block;margin-top:3px;color:#fff;font-size:14px;letter-spacing:2px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.st{border:1px solid #2a3040;background:#11151e;border-radius:14px;padding:9px 6px;text-align:center}
+.st span{display:block;font-size:9px;letter-spacing:1.3px;color:#77819a;font-weight:800}.st b{font-size:18px}
+.board{border:1px solid #2a3040;border-radius:22px;background:#0b0e15;padding:10px;display:flex;justify-content:center;position:relative;min-height:220px;align-items:center}
+canvas{display:block;touch-action:none}
+.hintline{margin:10px 2px;text-align:center;color:#8d97ab;font-size:12px;min-height:16px}
+.row{display:flex;gap:8px}
+.btn{flex:1;height:48px;border:1px solid #343b4d;border-radius:14px;background:#191e29;font-weight:850;font-size:13px}
+.btn.pri{background:#fff;color:#080a0f;border:0}
+.pad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,58px);gap:8px;justify-content:center;margin-top:12px}
+.pad button{border:1px solid #343b4d;border-radius:16px;background:#151a25;font-size:22px}
+.pad button:active{background:#262d40}
+.pad .u{grid-column:2}
+.ov{position:fixed;inset:0;background:rgba(4,5,9,.86);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
+.ov.on{display:flex}
+.panel{width:min(400px,100%);max-height:90vh;overflow:auto;border:1px solid #2f3648;background:linear-gradient(145deg,#161a26,#0e1118);border-radius:24px;padding:22px;text-align:center}
+.panel h2{margin:0 0 6px;font-size:24px}.panel p{margin:6px 0 14px;color:#8d97ab;font-size:13px;line-height:1.5}
+.stars{font-size:34px;letter-spacing:6px;margin:8px 0}
+.big{font-size:44px;font-weight:950;margin:4px 0}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:14px 0}
+.lv{aspect-ratio:1;border:1px solid #343b4d;border-radius:14px;background:#191e29;font-weight:900;font-size:18px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.lv small{font-size:10px;color:#ffd166;letter-spacing:1px;min-height:12px}
+.lv.lock{opacity:.35}.lv.now{border-color:#8b72ff;box-shadow:0 0 0 3px #8b72ff22}
+.panel .row{margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button class="back" id="back">‹</button>
+    <div><div class="brand">SASKEH GAME</div><div class="title">📦 Gudang Dorong</div></div>
+    <div class="room">ROOM<b id="rc">------</b></div>
+  </div>
+  <div class="stats">
+    <div class="st"><span>LEVEL</span><b id="sl">1/8</b></div>
+    <div class="st"><span>LANGKAH</span><b id="sm">0</b></div>
+    <div class="st"><span>DORONG</span><b id="sp">0</b></div>
+    <div class="st"><span>PAR</span><b id="sr">0</b></div>
+  </div>
+  <div class="board" id="board"><canvas id="cv"></canvas></div>
+  <div class="hintline" id="hint"></div>
+  <div class="row">
+    <button class="btn" id="undo">↶ Undo</button>
+    <button class="btn" id="reset">⟲ Ulang</button>
+    <button class="btn" id="menu">☰ Level</button>
+  </div>
+  <div class="pad">
+    <button class="u" data-d="0,-1">▲</button>
+    <button data-d="-1,0">◀</button>
+    <button data-d="0,1">▼</button>
+    <button data-d="1,0">▶</button>
+  </div>
+</div>
+<div class="ov" id="ov"><div class="panel" id="panel"></div></div>
+<script>
+const $=id=>document.getElementById(id)
+const Q=new URLSearchParams(location.search)
+let R=Q.get('room')||'',P=Q.get('player')||''
+try{if(!/^\d{6}$/.test(R))R=localStorage.getItem('saskeh_game_room')||'';if(!P)P=localStorage.getItem('saskeh_game_player')||''}catch{}
+if(/^\d{6}$/.test(R)&&P){try{localStorage.setItem('saskeh_game_room',R);localStorage.setItem('saskeh_game_player',P)}catch{}}
+$('rc').textContent=/^\d{6}$/.test(R)?R:'------'
+$('back').onclick=()=>location.assign('/dashboard/game?room='+encodeURIComponent(R)+'&player='+encodeURIComponent(P))
+let SID=''
+async function begin(){
+  if(!/^\d{6}$/.test(R)||!P){location.assign('/game');return}
+  try{
+    const r=await fetch('/api/game/session/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:R,player:P,game:'gudang-dorong'}),cache:'no-store'})
+    const d=await r.json()
+    if(d.ok)SID=d.sessionId
+  }catch{}
+}
+async function submit(score){
+  if(!SID)return
+  const id=SID
+  SID=''
+  try{await fetch('/api/game/scores',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:id,score}),cache:'no-store'})}catch{}
+}
+const LV=[
+{t:'Pemanasan',h:'Dorong kotak ke titik kuning. Kamu hanya bisa mendorong, tidak bisa menarik.',p:1,m:['#######','#     #','# .$@ #','#     #','#######']},
+{t:'Tiga Serangkai',h:'Pikirkan urutan: kotak tengah jangan sampai menghalangi jalanmu.',p:11,m:['#######','#  .  #','# $$$ #','#. @ .#','#     #','#######']},
+{t:'Dua Kotak',h:'Kotak yang menempel dinding tidak bisa ditarik keluar. Hati-hati.',p:14,m:['########','#      #','# $  . #','#  @   #','# $  . #','#      #','########']},
+{t:'Lorong Sempit',h:'Bagian kiri harus selesai lebih dulu supaya jalur tidak buntu.',p:16,m:['#######','#.    #','#.$$# #','#. $  #','#  @  #','#######']},
+{t:'Ruang Tengah',h:'Tiga kotak, tiga tujuan. Ada satu kotak yang harus didorong dua arah.',p:24,m:['########','#  #   #','# .$.  #','#  $ $ #','# .@# ##','#      #','########']},
+{t:'Salib Pilar',h:'Empat kotak mengelilingi pilar. Buat ruang gerak sebelum mendorong.',p:27,m:['#######','#  #  #','# $ $ #','#..@..#','# $ $ #','#  #  #','#######']},
+{t:'Delapan Sudut',h:'Susun ulang kotak agar tidak saling mengunci di dekat pilar.',p:31,m:['#########','#   #   #','# $ . $ #','#  #@#  #','# $ . $ #','#   #   #','#.  #  .#','#########']},
+{t:'Gudang Akhir',h:'Level terakhir. Satu kotak sudah di tempatnya, jangan sampai terdorong lagi.',p:33,m:['####','# .#','#  ###','#*@  #','#  $ #','#  ###','####']}
+]
+let prog={}
+try{prog=JSON.parse(localStorage.getItem('gd_prog_v1')||'{}')}catch{}
+const keep=()=>{try{localStorage.setItem('gd_prog_v1',JSON.stringify(prog))}catch{}}
+const cv=$('cv'),ctx=cv.getContext('2d')
+let cur=0,S=null,hist=[],moves=0,pushes=0,busy=false,T=40,dir=1
+function parse(i){
+  const rows=LV[i].m,w=Math.max(...rows.map(r=>r.length)),h=rows.length
+  const s={w,h,wall:[],goal:[],floor:[],b:[],px:0,py:0}
+  for(let y=0;y<h;y++){
+    s.wall[y]=[];s.goal[y]=[];s.floor[y]=[]
+    for(let x=0;x<w;x++){
+      const c=rows[y][x]||' '
+      s.wall[y][x]=c==='#'
+      s.goal[y][x]='.*+'.includes(c)
+      if('$*'.includes(c))s.b.push([x,y])
+      if('@+'.includes(c)){s.px=x;s.py=y}
+    }
+  }
+  const q=[[s.px,s.py]]
+  s.floor[s.py][s.px]=true
+  while(q.length){
+    const [x,y]=q.pop()
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const nx=x+dx,ny=y+dy
+      if(nx<0||ny<0||nx>=w||ny>=h||s.wall[ny][nx]||s.floor[ny][nx])continue
+      s.floor[ny][nx]=true;q.push([nx,ny])
+    }
+  }
+  return s
+}
+const boxAt=(x,y)=>S.b.findIndex(b=>b[0]===x&&b[1]===y)
+function fit(){
+  const avail=Math.min(560,document.documentElement.clientWidth)-48
+  const maxH=Math.max(220,innerHeight*.42)
+  T=Math.max(22,Math.min(58,Math.floor(Math.min(avail/S.w,maxH/S.h))))
+  const dpr=Math.min(devicePixelRatio||1,2)
+  cv.style.width=S.w*T+'px';cv.style.height=S.h*T+'px'
+  cv.width=S.w*T*dpr;cv.height=S.h*T*dpr
+  ctx.setTransform(dpr,0,0,dpr,0,0)
+}
+function rr(x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()
+}
+function draw(){
+  ctx.clearRect(0,0,S.w*T,S.h*T)
+  for(let y=0;y<S.h;y++)for(let x=0;x<S.w;x++){
+    const px=x*T,py=y*T
+    if(S.wall[y][x]){
+      ctx.fillStyle='#3b4260';rr(px+1,py+1,T-2,T-2,6);ctx.fill()
+      ctx.fillStyle='#4a5378';ctx.fillRect(px+4,py+4,T-8,3)
+      ctx.strokeStyle='#2a3048';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px+3,py+T/2);ctx.lineTo(px+T-3,py+T/2);ctx.stroke()
+    }else if(S.floor[y][x]){
+      ctx.fillStyle=(x+y)%2?'#171c2a':'#141926';ctx.fillRect(px,py,T,T)
+      if(S.goal[y][x]){
+        ctx.strokeStyle='#ffd166';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(px+T/2,py+T/2,T*.2,0,7);ctx.stroke()
+        ctx.fillStyle='rgba(255,209,102,.18)';ctx.beginPath();ctx.arc(px+T/2,py+T/2,T*.32,0,7);ctx.fill()
+      }
+    }
+  }
+  for(const [x,y] of S.b){
+    const on=S.goal[y][x],px=x*T,py=y*T
+    ctx.fillStyle=on?'#2fb56c':'#b9772e';rr(px+3,py+3,T-6,T-6,7);ctx.fill()
+    ctx.fillStyle=on?'#49e08c':'#d9963f';rr(px+6,py+6,T-12,T-12,5);ctx.fill()
+    ctx.strokeStyle=on?'#1a7a45':'#7d4f1a';ctx.lineWidth=2.5
+    ctx.beginPath();ctx.moveTo(px+8,py+8);ctx.lineTo(px+T-8,py+T-8);ctx.moveTo(px+T-8,py+8);ctx.lineTo(px+8,py+T-8);ctx.stroke()
+  }
+  const cx=S.px*T+T/2,cy=S.py*T+T/2
+  ctx.fillStyle='#8b72ff';ctx.beginPath();ctx.arc(cx,cy,T*.36,0,7);ctx.fill()
+  ctx.fillStyle='#a996ff';ctx.beginPath();ctx.arc(cx-T*.08,cy-T*.1,T*.2,0,7);ctx.fill()
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx+dir*T*.1-T*.09,cy-T*.05,T*.07,0,7);ctx.arc(cx+dir*T*.1+T*.09,cy-T*.05,T*.07,0,7);ctx.fill()
+}
+function hud(){
+  $('sl').textContent=(cur+1)+'/'+LV.length
+  $('sm').textContent=moves
+  $('sp').textContent=pushes
+  $('sr').textContent=LV[cur].p
+  $('hint').textContent=LV[cur].t+' — '+LV[cur].h
+}
+function load(i){
+  cur=i;S=parse(i);hist=[];moves=0;pushes=0;busy=false;dir=1
+  fit();hud();draw();closeOv()
+}
+function rating(m,p){
+  if(m<=p+Math.max(2,Math.round(p*.2)))return 3
+  if(m<=p+Math.max(6,Math.round(p*.6)))return 2
+  return 1
+}
+function levelScore(m,p){return rating(m,p)*100+Math.max(0,p*2-m)}
+function total(){return LV.reduce((a,_,i)=>a+(prog[i]?.sc||0),0)}
+function unlocked(){let n=0;while(n<LV.length&&prog[n])n++;return Math.min(n,LV.length-1)}
+function step(dx,dy){
+  if(busy)return
+  const nx=S.px+dx,ny=S.py+dy
+  if(S.wall[ny]?.[nx]!==false)return
+  const bi=boxAt(nx,ny)
+  const snap={px:S.px,py:S.py,b:S.b.map(b=>b.slice()),m:moves,u:pushes,d:dir}
+  if(bi>=0){
+    const tx=nx+dx,ty=ny+dy
+    if(S.wall[ty]?.[tx]!==false||boxAt(tx,ty)>=0)return
+    S.b[bi]=[tx,ty];pushes++
+  }
+  hist.push(snap)
+  if(dx)dir=dx
+  S.px=nx;S.py=ny;moves++
+  hud();draw()
+  if(S.b.every(b=>S.goal[b[1]][b[0]]))win()
+}
+function undo(){
+  if(busy||!hist.length)return
+  const h=hist.pop()
+  S.px=h.px;S.py=h.py;S.b=h.b;moves=h.m;pushes=h.u;dir=h.d
+  hud();draw()
+}
+function openOv(html){$('panel').innerHTML=html;$('ov').classList.add('on')}
+function closeOv(){$('ov').classList.remove('on')}
+function star(n){return '★'.repeat(n)+'☆'.repeat(3-n)}
+function win(){
+  busy=true
+  const p=LV[cur].p,st=rating(moves,p),sc=levelScore(moves,p)
+  const old=prog[cur]
+  if(!old||sc>old.sc)prog[cur]={s:st,m:moves,sc}
+  keep()
+  const last=cur===LV.length-1
+  setTimeout(()=>{
+    if(last){finish();return}
+    openOv(`<h2>Level ${cur+1} selesai!</h2><div class="stars" style="color:#ffd166">${star(st)}</div><p>${moves} langkah (par ${p}) · +${sc} poin<br>Total skor: ${total()}</p><div class="row"><button class="btn" id="again">Coba lagi</button><button class="btn pri" id="next">Lanjut ▶</button></div>`)
+    $('again').onclick=()=>load(cur)
+    $('next').onclick=()=>load(cur+1)
+  },260)
+}
+function finish(){
+  const sum=total(),stars=LV.reduce((a,_,i)=>a+(prog[i]?.s||0),0),max=LV.length*3
+  const perfect=stars===max
+  submit(sum)
+  openOv(`<div style="font-size:46px">🏆</div><h2>Gudang Terselesaikan!</h2><p>Semua ${LV.length} level berhasil kamu bereskan${perfect?' dengan bintang sempurna':''}.</p><div class="big">${sum}</div><p>skor total · ${stars}/${max} bintang</p><div class="row"><button class="btn" id="lvl">Pilih level</button><button class="btn pri" id="rep">Main lagi</button></div>`)
+  $('lvl').onclick=()=>{begin();levels()}
+  $('rep').onclick=()=>{prog={};keep();begin();load(0)}
+}
+function levels(){
+  const un=unlocked()
+  openOv(`<h2>Pilih Level</h2><p>Selesaikan level berurutan sampai gudang terakhir. Skor total: ${total()}</p><div class="grid">${LV.map((l,i)=>`<button class="lv ${i>un?'lock':''} ${i===cur?'now':''}" data-i="${i}">${i>un?'🔒':i+1}<small>${prog[i]?'★'.repeat(prog[i].s):''}</small></button>`).join('')}</div><button class="btn" id="cls" style="width:100%">Tutup</button>`)
+  document.querySelectorAll('.lv').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(i<=un)load(i)})
+  $('cls').onclick=closeOv
+}
+$('undo').onclick=undo
+$('reset').onclick=()=>load(cur)
+$('menu').onclick=levels
+document.querySelectorAll('.pad button').forEach(b=>b.onclick=()=>{const [x,y]=b.dataset.d.split(',').map(Number);step(x,y)})
+addEventListener('keydown',e=>{
+  const k={ArrowUp:[0,-1],w:[0,-1],ArrowDown:[0,1],s:[0,1],ArrowLeft:[-1,0],a:[-1,0],ArrowRight:[1,0],d:[1,0]}[e.key]
+  if(k){e.preventDefault();step(k[0],k[1])}
+  else if(e.key==='z'||e.key==='u')undo()
+  else if(e.key==='r')load(cur)
+})
+let sx=0,sy=0
+cv.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true})
+cv.addEventListener('touchend',e=>{
+  const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy
+  if(Math.max(Math.abs(dx),Math.abs(dy))<22)return
+  if(Math.abs(dx)>Math.abs(dy))step(dx>0?1:-1,0);else step(0,dy>0?1:-1)
+},{passive:true})
+addEventListener('resize',()=>{if(S){fit();draw()}})
+begin()
+load(unlocked())
+</script>
+</body>
+</html>

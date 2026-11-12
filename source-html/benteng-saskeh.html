@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#080a0f">
+<title>Benteng Saskeh — Saskeh Game</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{margin:0;min-height:100%;background:radial-gradient(circle at 20% 0,#22243b,#0d1018 40%,#07080c)}
+body{font-family:Inter,Arial,sans-serif;color:#fff;min-height:100vh}
+button{font:inherit;color:inherit}
+.wrap{width:min(560px,100%);margin:auto;padding:14px 14px 28px}
+.top{display:flex;align-items:center;gap:10px;padding-bottom:12px}
+.back{width:44px;height:44px;border:1px solid #2c3344;border-radius:14px;background:#121620;font-size:26px}
+.brand{font-size:10px;letter-spacing:1.8px;color:#8d97ab;font-weight:900}.title{font-size:20px;font-weight:950;margin-top:3px}
+.room{margin-left:auto;text-align:right;color:#727c90;font-size:9px;letter-spacing:1.4px;font-weight:900}.room b{display:block;margin-top:3px;color:#fff;font-size:14px;letter-spacing:2px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.st{border:1px solid #2a3040;background:#11151e;border-radius:14px;padding:8px 4px;text-align:center}
+.st span{display:block;font-size:9px;letter-spacing:1.2px;color:#77819a;font-weight:800}.st b{font-size:17px}
+.board{border:1px solid #2a3040;border-radius:20px;overflow:hidden;line-height:0;background:#0b0e15}
+canvas{width:100%;display:block;touch-action:manipulation}
+.info{margin:10px 2px 8px;min-height:34px;text-align:center;color:#a2acc0;font-size:12px;line-height:1.5}
+.tw{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tb{border:1px solid #343b4d;border-radius:14px;background:#171c27;padding:9px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:800}
+.tb i{font-style:normal;font-size:22px}.tb small{color:#ffd166;font-weight:900}
+.tb.on{border-color:#8b72ff;box-shadow:0 0 0 3px #8b72ff26;background:#1e2133}
+.tb.off{opacity:.42}
+.row{display:flex;gap:8px;margin-top:9px}
+.btn{flex:1;height:48px;border:1px solid #343b4d;border-radius:14px;background:#191e29;font-weight:850;font-size:13px}
+.btn.pri{background:#fff;color:#080a0f;border:0}
+.btn:disabled{opacity:.4}
+.ov{position:fixed;inset:0;background:rgba(4,5,9,.86);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
+.ov.on{display:flex}
+.panel{width:min(400px,100%);border:1px solid #2f3648;background:linear-gradient(145deg,#161a26,#0e1118);border-radius:24px;padding:22px;text-align:center}
+.panel h2{margin:0 0 6px;font-size:24px}.panel p{margin:6px 0 14px;color:#8d97ab;font-size:13px;line-height:1.5}
+.big{font-size:46px;font-weight:950;margin:4px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button class="back" id="back">‹</button>
+    <div><div class="brand">SASKEH GAME</div><div class="title">🏰 Benteng Saskeh</div></div>
+    <div class="room">ROOM<b id="rc">------</b></div>
+  </div>
+  <div class="stats">
+    <div class="st"><span>NYAWA</span><b id="hl">15</b></div>
+    <div class="st"><span>EMAS</span><b id="hg">0</b></div>
+    <div class="st"><span>GELOMBANG</span><b id="hw">0/10</b></div>
+    <div class="st"><span>SKOR</span><b id="hs">0</b></div>
+  </div>
+  <div class="board"><canvas id="cv"></canvas></div>
+  <div class="info" id="info"></div>
+  <div class="tw" id="tw"></div>
+  <div class="row" id="selrow" style="display:none">
+    <button class="btn" id="upg"></button>
+    <button class="btn" id="sell"></button>
+  </div>
+  <div class="row">
+    <button class="btn pri" id="go">▶ Mulai</button>
+    <button class="btn" id="spd" style="flex:.45">⏩ 1x</button>
+  </div>
+</div>
+<div class="ov" id="ov"><div class="panel" id="panel"></div></div>
+<script>
+const $=id=>document.getElementById(id)
+const Q=new URLSearchParams(location.search)
+let R=Q.get('room')||'',P=Q.get('player')||''
+try{if(!/^\d{6}$/.test(R))R=localStorage.getItem('saskeh_game_room')||'';if(!P)P=localStorage.getItem('saskeh_game_player')||''}catch{}
+if(/^\d{6}$/.test(R)&&P){try{localStorage.setItem('saskeh_game_room',R);localStorage.setItem('saskeh_game_player',P)}catch{}}
+$('rc').textContent=/^\d{6}$/.test(R)?R:'------'
+$('back').onclick=()=>location.assign('/dashboard/game?room='+encodeURIComponent(R)+'&player='+encodeURIComponent(P))
+let SID=''
+async function begin(){
+  if(!/^\d{6}$/.test(R)||!P){location.assign('/game');return}
+  try{
+    const r=await fetch('/api/game/session/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:R,player:P,game:'benteng-saskeh'}),cache:'no-store'})
+    const d=await r.json()
+    if(d.ok)SID=d.sessionId
+  }catch{}
+}
+async function submit(score){
+  if(!SID)return
+  const id=SID
+  SID=''
+  try{await fetch('/api/game/scores',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:id,score}),cache:'no-store'})}catch{}
+}
+const COLS=9,ROWS=12,MAXW=10
+const PTS=[[-1,1],[7,1],[7,4],[1,4],[1,7],[7,7],[7,10],[0,10]]
+const TT={
+  a:{n:'Panah',i:'🏹',c:50,d:12,r:2.6,cd:.55,col:'#5aa9ff',ds:'cepat, murah, lemah lawan baju besi'},
+  c:{n:'Meriam',i:'💣',c:100,d:32,r:2.8,cd:1.6,sp:1.1,col:'#ff9b54',ds:'ledakan area, kuat lawan kerumunan'},
+  f:{n:'Es',i:'❄️',c:80,d:6,r:2.4,cd:.8,sl:1,col:'#7fe9ff',ds:'memperlambat musuh yang lewat'}
+}
+const ET={
+  s:{i:'🟢',n:'Slime',hp:34,sp:1.5,rw:5,ar:0,l:1,g:.8},
+  b:{i:'🦇',n:'Kelelawar',hp:20,sp:2.7,rw:6,ar:0,l:1,g:.45},
+  k:{i:'🛡️',n:'Ksatria',hp:130,sp:1.1,rw:14,ar:2,l:2,g:1.3},
+  g:{i:'👹',n:'Raja Ogre',hp:1400,sp:.8,rw:150,ar:3,l:5,g:2}
+}
+const WAVES=[
+  [['s',8]],[['s',12]],[['s',8],['b',6]],[['b',14],['s',8]],[['k',4],['s',10]],
+  [['k',6],['b',10]],[['s',20],['k',6]],[['b',20],['k',8]],[['k',12],['b',14]],[['k',8],['s',15],['g',1]]
+]
+const cv=$('cv'),ctx=cv.getContext('2d')
+const pathTiles=new Set()
+const segs=[]
+let PL=0
+for(let i=1;i<PTS.length;i++){
+  const [x0,y0]=PTS[i-1],[x1,y1]=PTS[i]
+  const len=Math.abs(x1-x0)+Math.abs(y1-y0)
+  segs.push({x0,y0,x1,y1,len,from:PL})
+  PL+=len
+  for(let k=0;k<=len;k++)pathTiles.add((x0+Math.sign(x1-x0)*k)+','+(y0+Math.sign(y1-y0)*k))
+}
+function at(d){
+  for(const s of segs)if(d<=s.from+s.len){
+    const t=(d-s.from)/s.len
+    return [s.x0+(s.x1-s.x0)*t+.5,s.y0+(s.y1-s.y0)*t+.5]
+  }
+  const s=segs[segs.length-1]
+  return [s.x1+.5,s.y1+.5]
+}
+let G,sel=null,pick=null,speed=1,last=0,tick=0
+function fresh(){
+  G={lives:15,gold:140,wave:0,score:0,kills:0,run:false,over:false,towers:[],en:[],pr:[],fx:[],queue:[],timer:0,left:0,leaked:0}
+  sel=null;pick=null
+}
+const stat=t=>({d:TT[t.type].d*(1+.75*(t.lv-1)),r:TT[t.type].r+.25*(t.lv-1),cd:TT[t.type].cd*(1-.07*(t.lv-1))})
+const upCost=t=>Math.round(TT[t.type].c*(t.lv===1?.8:1.2))
+function waveText(n){
+  if(n>=MAXW)return ''
+  return WAVES[n].map(([t,c])=>ET[t].i+'×'+c).join('  ')
+}
+function ui(){
+  $('hl').textContent=G.lives
+  $('hg').textContent=G.gold
+  $('hw').textContent=(G.run?G.wave+1:G.wave)+'/'+MAXW
+  $('hs').textContent=G.score
+  $('tw').innerHTML=Object.entries(TT).map(([k,t])=>`<button class="tb ${pick===k?'on':''} ${G.gold<t.c?'off':''}" data-k="${k}"><i>${t.i}</i>${t.n}<small>${t.c} 🪙</small></button>`).join('')
+  document.querySelectorAll('.tb').forEach(b=>b.onclick=()=>{pick=pick===b.dataset.k?null:b.dataset.k;sel=null;ui()})
+  const s=sel
+  $('selrow').style.display=s?'flex':'none'
+  if(s){
+    const c=TT[s.type]
+    $('upg').textContent=s.lv>=3?'Level maksimal':`⬆ Upgrade ${upCost(s)} 🪙`
+    $('upg').disabled=s.lv>=3||G.gold<upCost(s)
+    $('sell').textContent=`Jual +${Math.floor(s.spent*.6)} 🪙`
+    $('info').textContent=`${c.i} ${c.n} Lv.${s.lv} — damage ${Math.round(stat(s).d)}, jangkauan ${stat(s).r.toFixed(1)}`
+  }else if(pick){
+    $('info').textContent=`${TT[pick].i} ${TT[pick].n}: ${TT[pick].ds}. Tap petak hijau untuk membangun.`
+  }else if(G.over){
+    $('info').textContent=''
+  }else if(G.run){
+    $('info').textContent=`Gelombang ${G.wave+1} berlangsung — sisa musuh ${G.left+G.en.length}`
+  }else{
+    $('info').textContent=G.wave<MAXW?`Berikutnya (${G.wave+1}/${MAXW}): ${waveText(G.wave)}`:''
+  }
+  $('go').disabled=G.run||G.over
+  $('go').textContent=G.run?'Gelombang berjalan...':`▶ Mulai Gelombang ${G.wave+1}`
+}
+function hudTick(){
+  $('hl').textContent=G.lives
+  $('hg').textContent=G.gold
+  $('hs').textContent=G.score
+  document.querySelectorAll('.tb').forEach(b=>b.classList.toggle('off',G.gold<TT[b.dataset.k].c))
+  if(sel)$('upg').disabled=sel.lv>=3||G.gold<upCost(sel)
+  if(G.run&&!sel&&!pick)$('info').textContent=`Gelombang ${G.wave+1} berlangsung — sisa musuh ${G.left+G.en.length}`
+}
+function startWave(){
+  if(G.run||G.over)return
+  const groups=WAVES[G.wave]
+  G.queue=[]
+  groups.forEach(([t,c],gi)=>{for(let i=0;i<c;i++)G.queue.push({t,g:i===c-1?1.8:ET[t].g})})
+  G.left=G.queue.length
+  G.timer=.4
+  G.run=true
+  ui()
+}
+function spawn(t){
+  const e=ET[t],sc=1+.18*G.wave
+  G.en.push({t,hp:e.hp*sc,mx:e.hp*sc,d:0,slow:0,sf:1})
+}
+function hurt(e,dmg){
+  e.hp-=Math.max(1,dmg-ET[e.t].ar)
+  if(e.hp<=0&&!e.dead){
+    e.dead=true
+    G.gold+=ET[e.t].rw
+    G.kills++
+    G.score+=ET[e.t].l*2
+    G.fx.push({x:at(e.d)[0],y:at(e.d)[1],t:.5,txt:'+'+ET[e.t].rw})
+  }
+}
+function finish(win){
+  G.over=true;G.run=false
+  const cleared=win?MAXW:G.wave
+  G.score=cleared*100+G.kills*2+(win?500+G.lives*50:0)
+  submit(G.score)
+  ui()
+  $('panel').innerHTML=`<div style="font-size:46px">${win?'🏆':'💀'}</div><h2>${win?'Benteng Bertahan!':'Benteng Runtuh'}</h2><p>${win?`Kamu menahan semua ${MAXW} gelombang dengan sisa ${G.lives} nyawa.`:`Kamu gugur di gelombang ${G.wave+1}. Coba susun pertahanan berbeda.`}</p><div class="big">${G.score}</div><p>${G.kills} musuh dikalahkan</p><div class="row"><button class="btn pri" id="again">Main lagi</button></div>`
+  $('ov').classList.add('on')
+  $('again').onclick=()=>{$('ov').classList.remove('on');fresh();begin();ui()}
+}
+function update(dt){
+  if(G.over)return
+  if(G.run&&G.queue.length){
+    G.timer-=dt
+    if(G.timer<=0){
+      const n=G.queue.shift()
+      spawn(n.t);G.left--
+      G.timer=n.g
+    }
+  }
+  for(const e of G.en){
+    if(e.slow>0)e.slow-=dt
+    e.d+=ET[e.t].sp*(e.slow>0?e.sf:1)*dt
+    if(e.d>=PL&&!e.dead){
+      e.dead=true;e.leak=true
+      G.lives-=ET[e.t].l
+    }
+  }
+  for(const t of G.towers){
+    t.cd-=dt
+    if(t.cd>0)continue
+    const s=stat(t),cx=t.x+.5,cy=t.y+.5
+    let best=null
+    for(const e of G.en){
+      if(e.dead)continue
+      const [ex,ey]=at(e.d)
+      if(Math.hypot(ex-cx,ey-cy)<=s.r&&(!best||e.d>best.d))best=e
+    }
+    if(best){
+      t.cd=s.cd
+      G.pr.push({x:cx,y:cy,tg:best,t})
+    }
+  }
+  for(const p of G.pr){
+    if(p.tg.dead){p.gone=true;continue}
+    const [tx,ty]=at(p.tg.d),dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy),step=10*dt
+    if(dist<=step+.05){
+      p.gone=true
+      const c=TT[p.t.type],s=stat(p.t)
+      hurt(p.tg,s.d)
+      if(c.sp)for(const e of G.en)if(e!==p.tg&&!e.dead&&Math.hypot(at(e.d)[0]-tx,at(e.d)[1]-ty)<=c.sp)hurt(e,s.d*.6)
+      if(c.sl){
+        for(const e of G.en)if(!e.dead&&Math.hypot(at(e.d)[0]-tx,at(e.d)[1]-ty)<=.9){e.slow=1.6;e.sf=.6-.08*(p.t.lv-1)}
+      }
+      G.fx.push({x:tx,y:ty,t:.25,ring:c.sp||.5,col:c.col})
+    }else{p.x+=dx/dist*step;p.y+=dy/dist*step}
+  }
+  G.pr=G.pr.filter(p=>!p.gone)
+  G.en=G.en.filter(e=>!e.dead)
+  for(const f of G.fx)f.t-=dt
+  G.fx=G.fx.filter(f=>f.t>0)
+  if(G.lives<=0){G.lives=0;finish(false);return}
+  if(G.run&&!G.queue.length&&!G.en.length){
+    G.run=false
+    G.wave++
+    const bonus=20+G.wave*6
+    G.gold+=bonus
+    G.score=G.wave*100+G.kills*2
+    if(G.wave>=MAXW){finish(true);return}
+    ui()
+  }
+}
+function rr(x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()
+}
+function glyph(ch,x,y,size,fill='#fff',face='serif'){
+  ctx.save()
+  ctx.translate(x,y)
+  ctx.scale(.01,.01)
+  ctx.font=size*100+'px '+face
+  ctx.textAlign='center'
+  ctx.textBaseline='middle'
+  ctx.fillStyle=fill
+  ctx.fillText(ch,0,size*4)
+  ctx.restore()
+}
+function draw(){
+  ctx.clearRect(0,0,COLS,ROWS)
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const isP=pathTiles.has(x+','+y)
+    ctx.fillStyle=isP?((x+y)%2?'#8a6a45':'#82633f'):((x+y)%2?'#2b4a2f':'#27452b')
+    ctx.fillRect(x,y,1,1)
+    if(!isP&&pick&&!G.towers.some(t=>t.x===x&&t.y===y)){
+      ctx.fillStyle='rgba(255,255,255,.13)';ctx.beginPath();ctx.arc(x+.5,y+.5,.09,0,7);ctx.fill()
+    }
+  }
+  glyph('🏰',.5,10.5,.9)
+  ctx.fillStyle='rgba(255,90,90,.9)';ctx.beginPath();ctx.moveTo(.05,1.3);ctx.lineTo(.4,1.5);ctx.lineTo(.05,1.7);ctx.fill()
+  for(const t of G.towers){
+    const c=TT[t.type]
+    ctx.fillStyle='#1a1e2c';rr(t.x+.08,t.y+.08,.84,.84,.18);ctx.fill()
+    ctx.strokeStyle=c.col;ctx.lineWidth=.07;ctx.stroke()
+    glyph(c.i,t.x+.5,t.y+.48,.5)
+    ctx.fillStyle='#ffd166'
+    for(let i=0;i<t.lv;i++){ctx.beginPath();ctx.arc(t.x+.3+i*.2,t.y+.86,.055,0,7);ctx.fill()}
+  }
+  if(sel){
+    const s=stat(sel)
+    ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=.05;ctx.setLineDash([.15,.12])
+    ctx.beginPath();ctx.arc(sel.x+.5,sel.y+.5,s.r,0,7);ctx.stroke();ctx.setLineDash([])
+    ctx.strokeStyle='#8b72ff';ctx.lineWidth=.08;rr(sel.x+.03,sel.y+.03,.94,.94,.2);ctx.stroke()
+  }
+  for(const e of G.en){
+    const [x,y]=at(e.d),d=ET[e.t]
+    const sz=e.t==='g'?1.15:e.t==='k'?.8:.62
+    if(e.slow>0){ctx.fillStyle='rgba(127,233,255,.35)';ctx.beginPath();ctx.arc(x,y,sz*.5,0,7);ctx.fill()}
+    glyph(d.i,x,y,sz)
+    const w=Math.max(.5,sz*.9)
+    ctx.fillStyle='#000a';ctx.fillRect(x-w/2,y-sz*.62,w,.09)
+    ctx.fillStyle=e.hp/e.mx>.5?'#49e08c':e.hp/e.mx>.25?'#ffd166':'#ff6b6b'
+    ctx.fillRect(x-w/2,y-sz*.62,w*Math.max(0,e.hp/e.mx),.09)
+  }
+  for(const p of G.pr){
+    ctx.fillStyle=TT[p.t.type].col;ctx.beginPath();ctx.arc(p.x,p.y,p.t.type==='c'?.13:.08,0,7);ctx.fill()
+  }
+  for(const f of G.fx){
+    if(f.ring){
+      ctx.strokeStyle=f.col;ctx.globalAlpha=f.t/.25;ctx.lineWidth=.06
+      ctx.beginPath();ctx.arc(f.x,f.y,f.ring*(1-f.t/.25)+.1,0,7);ctx.stroke();ctx.globalAlpha=1
+    }else{
+      ctx.globalAlpha=Math.min(1,f.t*2)
+      glyph(f.txt,f.x,f.y-(.5-f.t)*.8,.32,'#ffd166','sans-serif')
+      ctx.globalAlpha=1
+    }
+  }
+}
+function fit(){
+  const w=Math.min(560,document.documentElement.clientWidth)-28
+  const dpr=Math.min(devicePixelRatio||1,2)
+  cv.width=w*dpr;cv.height=w*dpr*ROWS/COLS
+  cv.style.height=w*ROWS/COLS+'px'
+  ctx.setTransform(dpr*w/COLS,0,0,dpr*w/COLS,0,0)
+}
+function loop(ts){
+  const dt=Math.min((ts-last)/1000,.05)*speed
+  last=ts
+  update(dt)
+  draw()
+  if(++tick%6===0)hudTick()
+  requestAnimationFrame(loop)
+}
+cv.addEventListener('click',e=>{
+  if(G.over)return
+  const r=cv.getBoundingClientRect()
+  const x=Math.floor((e.clientX-r.left)/r.width*COLS),y=Math.floor((e.clientY-r.top)/r.height*ROWS)
+  const t=G.towers.find(t=>t.x===x&&t.y===y)
+  if(t){sel=t;pick=null;ui();return}
+  if(pick&&!pathTiles.has(x+','+y)&&x>=0&&x<COLS&&y>=0&&y<ROWS){
+    const c=TT[pick]
+    if(G.gold<c.c){$('info').textContent='Emas tidak cukup untuk '+c.n+'.';return}
+    G.gold-=c.c
+    G.towers.push({x,y,type:pick,lv:1,cd:0,spent:c.c})
+    G.fx.push({x:x+.5,y:y+.5,t:.25,ring:.6,col:c.col})
+    ui()
+    return
+  }
+  sel=null;ui()
+})
+$('upg').onclick=()=>{
+  if(!sel||sel.lv>=3)return
+  const c=upCost(sel)
+  if(G.gold<c)return
+  G.gold-=c;sel.spent+=c;sel.lv++
+  ui()
+}
+$('sell').onclick=()=>{
+  if(!sel)return
+  G.gold+=Math.floor(sel.spent*.6)
+  G.towers=G.towers.filter(t=>t!==sel)
+  sel=null
+  ui()
+}
+$('go').onclick=startWave
+$('spd').onclick=()=>{
+  speed=speed===1?2:speed===2?3:1
+  $('spd').textContent='⏩ '+speed+'x'
+}
+addEventListener('resize',fit)
+fresh()
+fit()
+ui()
+begin()
+requestAnimationFrame(t=>{last=t;loop(t)})
+</script>
+</body>
+</html>
